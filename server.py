@@ -1,12 +1,12 @@
 from flask import Flask, jsonify, request
-from flask_cors import CORS  # Import CORS from flask_cors
+from flask_cors import CORS
 
 from mcts import MCTS
 from node import Node
 from state import State
 
 app = Flask(__name__)
-CORS(app)  # Add this line to enable CORS for your app
+CORS(app) 
 
 @app.route('/process', methods=['POST'])
 def process():
@@ -18,12 +18,9 @@ def process():
             goats_killed=data['goats_killed'],
             goats_placed=data['goats_placed']
         )
-        # print("Initial Board State:", init_board)
+
         mcts = MCTS(search_limit=1000)
         node = mcts.search(Node(init_board))
-
-        # print("Action:", action)
-        # print("Final State:", final_state)
 
         result = {
             "player": node.last_action.player,

@@ -38,10 +38,6 @@ class State:
     def getPossibleActions(self):
         if self.currentPlayer == 'G':
 
-            # if self.goats_placed == 0:
-            #     return [Action(player=self.currentPlayer, pos=idx)for idx in [1,2,6,7,12]]
-
-
             if (self.goats_placed) < 20:
                 return [
                     Action(player=self.currentPlayer, pos=idx)

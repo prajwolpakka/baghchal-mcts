@@ -14,7 +14,7 @@ class MCTS:
         exploring_factor = 4
         for i in range(self.search_limit):
             if (i + 1) % (self.search_limit // 10) == 0:  # Check if we've reached a 10% increment
-                exploring_factor -= 0.25  # Decrease the exploring factor by 0.1
+                exploring_factor -= 0.25  # Decrease the exploring factor by 0.25
             selected_node = self.select(root,exploring_factor)
             if not selected_node.state.isTerminal():
                 expanded_node = self.expand(selected_node)

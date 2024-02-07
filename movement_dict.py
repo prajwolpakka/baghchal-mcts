@@ -1,3 +1,6 @@
+# Dictionary representing possible movements on a game board
+# Key: Positions on the board, Value: Reachable positions from the key position
+
 MOVEMENTS = {
         0: [1, 5, 6],
         1: [0, 2, 6],

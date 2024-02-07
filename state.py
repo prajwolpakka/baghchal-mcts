@@ -1,23 +1,49 @@
 import math
 from copy import deepcopy
-
 from action import Action
 from movement_dict import MOVEMENTS
 
-
 class State:
-    def __init__(self, init_board,currentPlayer,goats_killed,goats_placed):
-        # Initialize the game board and current player
+    """
+    Represents the state of the game.
+
+    Attributes:
+        board (list): The game board represented as a list of characters.
+        currentPlayer (str): The player currently taking a turn ('G' for goats, 'T' for tigers).
+        goats_killed (int): The number of goats killed in the game.
+        goats_placed (int): The number of goats placed on the board.
+        turn (int): The current turn number.
+        kill_history (list): History of turns in which goats were killed.
+    """
+
+    def __init__(self, init_board, currentPlayer, goats_killed, goats_placed):
+        """
+        Initializes a State object with the given parameters.
+
+        Args:
+            init_board (list): The initial state of the game board.
+            currentPlayer (str): The player currently taking a turn ('G' for goats, 'T' for tigers).
+            goats_killed (int): The number of goats killed in the game.
+            goats_placed (int): The number of goats placed on the board.
+        """
         self.board = init_board
         self.currentPlayer = currentPlayer
         self.goats_killed = goats_killed
         self.goats_placed = goats_placed
-        
         self.turn = 1
         self.kill_history = []
-        
 
     def jump_position(self, tiger_idx, goat_idx):
+        """
+        Calculates the position of the leap during a tiger's jump action.
+
+        Args:
+            tiger_idx (int): The index of the tiger's current position.
+            goat_idx (int): The index of the goat's current position.
+
+        Returns:
+            int: The index of the leap position if valid, None otherwise.
+        """
         # Calculate the row and column indices of the tiger and goat
         tiger_row, tiger_col = tiger_idx // 5, tiger_idx % 5
         goat_row, goat_col = goat_idx // 5, goat_idx % 5
@@ -36,56 +62,74 @@ class State:
             return None  # Invalid leap, return None
 
     def getPossibleActions(self):
-        if self.currentPlayer == 'G':
+        """
+        Generates all possible actions for the current player.
 
-            if (self.goats_placed) < 20:
-                return [
+        Returns:
+            list: A list of Action objects representing possible actions.
+        """
+        possibleActions = []
+
+        if self.currentPlayer == 'G':
+            if self.goats_placed < 20:
+                # Goats placing phase
+                possibleActions = [
                     Action(player=self.currentPlayer, pos=idx)
                     for idx, data in enumerate(self.board) if data == " "
                 ]
-
             else:
-                return [
+                # Goats moving phase
+                possibleActions = [
                     Action(player=self.currentPlayer, pos=idx, next_pos=next_pos)
                     for idx, data in enumerate(self.board) if data == 'G'
                     for next_pos in MOVEMENTS[idx] if self.board[next_pos] == ' '
                 ]
 
         else:  # For tiger's turn
-            possibleActions = []
             for pos, data in enumerate(self.board):
                 if data == 'T':
                     for adj_idx in MOVEMENTS[pos]:
                         adj_data = self.board[adj_idx]
                         if adj_data == ' ':
                             possibleActions.append(Action(player=self.currentPlayer, pos=pos, next_pos=adj_idx))
-                        
-                        elif adj_data == 'G' :
-                            next_idx = self.jump_position(pos,adj_idx)
+                        elif adj_data == 'G':
+                            next_idx = self.jump_position(pos, adj_idx)
                             if next_idx:
-                                possibleActions.append(Action(player=self.currentPlayer, pos=pos, next_pos=next_idx,jumped_pos=adj_idx))
+                                possibleActions.append(Action(player=self.currentPlayer, pos=pos, next_pos=next_idx, jumped_pos=adj_idx))
+
         return possibleActions
-    
+
     def takeAction(self, action):
+        """
+        Applies the given action to the current state and returns the new state.
+
+        Args:
+            action (Action): The action to be applied.
+
+        Returns:
+            State: The new state after applying the action.
+        """
         newState = deepcopy(self)  # Creates a clone of the current state
 
         if self.currentPlayer == 'G':
-            # Placing phase
+            # Goats Placing Phase
             if self.goats_placed < 20:
                 newState.board[action.pos] = 'G'
-                newState.goats_placed+=1
+                newState.goats_placed += 1
+            
+            # Goat Moving Phase
             else:
                 newState.board[action.pos] = ' '
                 newState.board[action.next_pos] = 'G'
 
-            newState.currentPlayer = 'T' 
+            newState.currentPlayer = 'T'
 
         else:
-            # Handle tiger's action (movement or capturing)
+            # Tiger's turn: handle movement or capturing
             newState.board[action.pos] = ' '
             newState.board[action.next_pos] = 'T'
             if action.jumped_pos:
-                newState.goats_killed+=1
+                newState.goats_killed += 1
                 newState.kill_history.append(self.turn)
                 newState.board[action.jumped_pos] = ' '
             
@@ -95,10 +139,26 @@ class State:
         return newState
 
     def isTerminal(self):
-        return True if (self.goats_killed >= 5 or len(self.getPossibleActions()) == 0) else False
+        """
+        Checks if the current state is a terminal state.
 
+        Returns:
+            bool: True if the state is terminal, False otherwise.
+        """
+        return True if self.goats_killed >= 5 or len(self.getPossibleActions()) == 0 else False
 
-    def zmf(self,x, a=2, b=8):
+    def zmf(self, x, a=2, b=8):
+        """
+        Computes the Z-shaped membership function.
+
+        Args:
+            x (float): The input value.
+            a (float): Lower bound of the function (default 2).
+            b (float): Upper bound of the function (default 8).
+
+        Returns:
+            float: The output value of the function.
+        """
         if x < a:
             return 1.0
         elif a <= x <= (a + b) / 2:
@@ -109,15 +169,27 @@ class State:
             return 0.0
 
     def get_result(self):
-        weight = sum([self.zmf(item) for item in self.kill_history])*10
+        """
+        Computes the result of the game based on the current state.
+
+        Returns:
+            dict: A dictionary containing the result of the game.
+        """
+        weight = sum([self.zmf(item) for item in self.kill_history]) * 10
         winner = 'G' if self.currentPlayer == 'T' else 'T'
 
         if winner == 'G':
-            return {'loss':self.goats_killed+self.turn*0.1+weight,'win':15,'winner':'G'}
+            return {'loss': self.goats_killed + self.turn * 0.1 + weight, 'win': 15, 'winner': 'G'}
         else:
-            return {'loss':self.goats_placed+self.turn*0.1,'win':15 + weight,'winner':'T'}
-        
+            return {'loss': self.goats_placed + self.turn * 0.1, 'win': 15 + weight, 'winner': 'T'}
+
     def __str__(self):
+        """
+        Returns a string representation of the state.
+
+        Returns:
+            str: A string representing the state.
+        """
         repr = ""
         repr += f"Killed:{self.goats_killed}, "
         repr += f"Placed:{self.goats_placed}, "
